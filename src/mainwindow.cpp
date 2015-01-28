@@ -97,6 +97,12 @@ void MainWindow::updateGraph()
                 QObject::connect(act, SIGNAL(toggled(bool)), this, SLOT(showHideGraph(bool)));
             }
 
+            _graphShowHide->addSeparator();
+            QAction *act = _graphShowHide->addAction("Show legend");
+            act->setCheckable(true);
+            act->setChecked(true);
+            connect(act, SIGNAL(toggled(bool)), this, SLOT(showHideLegend(bool)));
+
             _graphShowHide->setEnabled(true);
         }
         else
@@ -245,5 +251,10 @@ void MainWindow::showHideGraph(bool bState)
     QAction * pAction = qobject_cast<QAction *>(QObject::sender());
 
     _graphViewer->showGraph(pAction->data().toInt(), bState);
+}
+
+void MainWindow::showHideLegend(bool bState)
+{
+    _graphViewer->showLegend(bState);
 }
 

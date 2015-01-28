@@ -129,6 +129,12 @@ void GraphViewer::showGraph(quint32 index, bool bShow)
     _pPlot->replot();
 }
 
+void GraphViewer::showLegend(bool bShow)
+{
+    _pPlot->legend->setVisible(bShow);
+    _pPlot->replot();
+}
+
 void GraphViewer::autoScaleXAxis()
 {
     _pPlot->xAxis->rescale();

@@ -31,6 +31,7 @@ private slots:
     void showXAxisScaleDialog();
     void showYAxisScaleDialog();
     void showHideGraph(bool bState);
+    void showHideLegend(bool bState);
 
 
 private:
