@@ -31,10 +31,10 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(_ui->actionSetManualScaleXAxis, SIGNAL(triggered()), this, SLOT(showXAxisScaleDialog()));
     connect(_ui->actionSetManualScaleYAxis, SIGNAL(triggered()), this, SLOT(showYAxisScaleDialog()));
 
-    _pGraphShowHide = new QMenu("Show/Hide");
-    _pGraphShowHide->setEnabled(false);
-    _ui->menuGraph->addSeparator();
-    _ui->menuGraph->addMenu(_pGraphShowHide);
+    _pGraphShowHide = _ui->menuShowHide;
+
+    connect(_ui->actionWatchFile, SIGNAL(toggled(bool)), this, SLOT(watchFileChanged(bool)));
+    connect(_ui->actionDynamicSession, SIGNAL(toggled(bool)), this, SLOT(dynamicSessionChanged(bool)));
 }
 
 MainWindow::~MainWindow()
@@ -77,6 +77,12 @@ void MainWindow::getDataFileSettings()
         _pParser = pNewParser;
 
         connect(_pParser, SIGNAL(fileChanged()), this, SLOT(dataFileChange()));
+        connect(_pParser->getDataParseSettingsPointer(), SIGNAL(watchFilechangesChanged(bool)), _ui->actionWatchFile, SLOT(setChecked(bool)));
+
+        _ui->actionWatchFile->setEnabled(true);
+        _ui->actionWatchFile->setChecked(_pParser->getDataParseSettingsPointer()->getWatchFileChanges());
+        _ui->actionDynamicSession->setEnabled(true);
+        _ui->actionDynamicSession->setChecked(_pParser->getDataParseSettingsPointer()->getDynamicSession());
     }
     else // New file load failed
     {
@@ -151,28 +157,40 @@ void MainWindow::dataFileChange()
 {
     static QMutex mutex;
 
-    if(mutex.tryLock())
+    if(_pParser->getDataParseSettingsPointer()->getWatchFileChanges())
     {
-        QFile file(_pParser->getDataParseSettingsPointer()->getPath());
-        if(file.size() > 0)
+        if(mutex.tryLock())
         {
-            if(_pParser->getDataParseSettingsPointer()->getDynamicSession())
+            QFile file(_pParser->getDataParseSettingsPointer()->getPath());
+            if(file.size() > 0)
             {
-                reloadDataFile();
-            }
-            else
-            {
-                QMessageBox::StandardButton reply;
-                reply = QMessageBox::question(this, "Data file changed", "Reload data file?", QMessageBox::Yes|QMessageBox::No);
-                if(reply == QMessageBox::Yes)
+                if(_pParser->getDataParseSettingsPointer()->getDynamicSession())
                 {
                     reloadDataFile();
                 }
+                else
+                {
+                    QMessageBox::StandardButton reply;
+                    reply = QMessageBox::question(this, "Data file changed", "Reload data file? Press cancel to disable the auto reload  function.", QMessageBox::Yes|QMessageBox::No|QMessageBox::Cancel);
+                    if(reply == QMessageBox::Yes)
+                    {
+                        reloadDataFile();
+                    }
+                    else if(reply == QMessageBox::Cancel)
+                    {
+                        _pParser->getDataParseSettingsPointer()->setWatchFileChanges(false);
+                    }
+                }
             }
-        }
 
-        mutex.unlock();
+            mutex.unlock();
+        }
     }
+}
+
+void MainWindow::fileWatchFail()
+{
+    QMessageBox::warning(this, "Add file watch failed", "Failed to add a filewatch. Please check your system configuration!");
 }
 
 void MainWindow::prepareImageExport()
@@ -256,5 +274,24 @@ void MainWindow::showHideGraph(bool bState)
     QAction * pAction = qobject_cast<QAction *>(QObject::sender());
 
     _pGraphViewer->showGraph(pAction->data().toInt(), bState);
+}
+
+void MainWindow::watchFileChanged(bool bState)
+{
+    _ui->actionWatchFile->setChecked(bState);
+    _ui->actionDynamicSession->setEnabled(bState);
+
+    if(_pParser != NULL)
+    {
+        _pParser->getDataParseSettingsPointer()->setWatchFileChanges(bState);
+    }
+}
+
+void MainWindow::dynamicSessionChanged(bool bState)
+{
+    if(_pParser != NULL)
+    {
+        _pParser->getDataParseSettingsPointer()->setDynamicSession(bState);
+    }
 }
 

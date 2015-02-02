@@ -26,12 +26,14 @@ private slots:
     void exitApplication();
     void reloadDataFile();
     void dataFileChange();
+    void fileWatchFail();
     void prepareImageExport();
     void showAbout();
     void showXAxisScaleDialog();
     void showYAxisScaleDialog();
     void showHideGraph(bool bState);
-
+    void watchFileChanged(bool bState);
+    void dynamicSessionChanged(bool bState);
 
 private:
     bool updateGraph(DataFileParser *_pDataFileParser);

@@ -63,7 +63,10 @@ bool DataFileParser::loadDataFile()
             _pFileWatcher->removePaths(_pFileWatcher->directories());
         }
 
-        _pFileWatcher->addPath(_parseSettings.getPath());
+        if(!_pFileWatcher->addPath(_parseSettings.getPath()))
+        {
+            emit fileWatchFailed();
+        }
     }
     else
     {

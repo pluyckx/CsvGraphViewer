@@ -22,6 +22,7 @@ public:
 
 signals:
     void fileChanged();
+    void fileWatchFailed();
 
 private slots:
     void fileChange(QString);
