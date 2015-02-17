@@ -27,9 +27,12 @@ public slots:
 private slots:
     void generateTickLabels();
     void selectionChanged();
-    void mousePress();
+    void mousePress(QMouseEvent *event);
+    void mouseRelease(QMouseEvent *event);
+    void mouseMove(QMouseEvent *event);
     void mouseWheel();
     void axisDoubleClicked(QCPAxis * axis);
+    void beforeReplot();
 
 private:
 
@@ -38,6 +41,9 @@ private:
     static const QList<QColor> _colorlist;
 
     QVector<QString> tickLabels;
+
+    bool draggingLegend;
+    QPointF dragLegendOrigin;
 
     static const quint32 _cMinuteTripPoint = 5*60*1000; /* in ms */
     static const quint32 _cHourTripPoint = 10*60*60*1000; /* in ms */

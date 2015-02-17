@@ -51,13 +51,21 @@ GraphViewer::GraphViewer(QCustomPlot * pPlot, QObject *parent) :
    _pPlot->legend->setVisible(false);
    QFont legendFont = QApplication::font();
    legendFont.setPointSize(10);
-   _pPlot->legend->setFont(legendFont);
+   _pPlot->legend->setFont(legendFont);   
+
+   // set the placement of the legend (index 0 in the axis rect's inset layout) to not be
+   // border-aligned (default), but freely, so we can reposition it anywhere:
+   _pPlot->axisRect()->insetLayout()->setInsetPlacement(0, QCPLayoutInset::ipFree);
+   draggingLegend = false;
 
    // connect slot that ties some axis selections together (especially opposite axes):
    connect(_pPlot, SIGNAL(selectionChangedByUser()), this, SLOT(selectionChanged()));
 
    // connect slots that takes care that when an axis is selected, only that direction can be dragged and zoomed:
-   connect(_pPlot, SIGNAL(mousePress(QMouseEvent*)), this, SLOT(mousePress()));
+   connect(_pPlot, SIGNAL(mousePress(QMouseEvent*)), this, SLOT(mousePress(QMouseEvent*)));
+   connect(_pPlot, SIGNAL(mouseMove(QMouseEvent*)), this, SLOT(mouseMove(QMouseEvent*)));
+   connect(_pPlot, SIGNAL(mouseRelease(QMouseEvent*)), this, SLOT(mouseRelease(QMouseEvent*)));
+   connect(_pPlot, SIGNAL(beforeReplot()), this, SLOT(beforeReplot()));
    connect(_pPlot, SIGNAL(mouseWheel(QWheelEvent*)), this, SLOT(mouseWheel()));
    connect(_pPlot, SIGNAL(axisDoubleClick(QCPAxis*,QCPAxis::SelectablePart,QMouseEvent*)), this, SLOT(axisDoubleClicked(QCPAxis*)));
 }
@@ -93,10 +101,15 @@ void GraphViewer::setupGraph(QList<QList<double> > * pDataLists, QStringList * p
         pGraph->setPen(pen);
    }
 
+   // Top left corner is (0, 0), top right corner is (1, 0)
+   QRectF rect = _pPlot->axisRect()->insetLayout()->insetRect(0); // Get rect of legend
+   rect.moveRight(0.98);
+   rect.moveTop(0.02);
+   _pPlot->axisRect()->insetLayout()->setInsetRect(0, rect);
+
    _pPlot->legend->setVisible(true);
    _pPlot->rescaleAxes();
    _pPlot->replot();
-
 }
 
 void GraphViewer::exportGraphImage(QString imageFile)
@@ -203,7 +216,7 @@ void GraphViewer::selectionChanged()
 
 }
 
-void GraphViewer::mousePress()
+void GraphViewer::mousePress(QMouseEvent *event)
 {
    // if an axis is selected, only allow the direction of that axis to be dragged
    // if no axis is selected, both directions may be dragged
@@ -220,6 +233,40 @@ void GraphViewer::mousePress()
    {
        _pPlot->axisRect()->setRangeDrag(Qt::Horizontal|Qt::Vertical);
    }
+
+    if (_pPlot->legend->selectTest(event->pos(), false) > 0)
+    {
+        draggingLegend = true;
+
+        // since insetRect is in axisRect coordinates (0..1), we transform the mouse position:
+        QPointF mousePoint( (event->pos().x() - _pPlot->axisRect()->left()) / (double)_pPlot->axisRect()->width(),
+                            (event->pos().y() - _pPlot->axisRect()->top()) / (double)_pPlot->axisRect()->height());
+
+        dragLegendOrigin = mousePoint - _pPlot->axisRect()->insetLayout()->insetRect(0).topLeft();
+    }
+
+    qDebug() << "x: " << (double)((event->pos().x() - _pPlot->axisRect()->left()) / (double)_pPlot->axisRect()->width()) << "\ty: " << (double)((event->pos().y() - _pPlot->axisRect()->top()) / (double)_pPlot->axisRect()->height());
+}
+
+void GraphViewer::mouseRelease(QMouseEvent *event)
+{
+    Q_UNUSED(event)
+    draggingLegend = false;
+}
+
+void GraphViewer::mouseMove(QMouseEvent *event)
+{
+    if (draggingLegend)
+    {
+        QRectF rect = _pPlot->axisRect()->insetLayout()->insetRect(0);
+        // since insetRect is in axisRect coordinates (0..1), we transform the mouse position:
+        QPointF mousePoint( (event->pos().x() - _pPlot->axisRect()->left()) / (double)_pPlot->axisRect()->width(),
+                            (event->pos().y() - _pPlot->axisRect()->top()) / (double)_pPlot->axisRect()->height());
+
+        rect.moveTopLeft(mousePoint - dragLegendOrigin);
+        _pPlot->axisRect()->insetLayout()->setInsetRect(0, rect);
+        _pPlot->replot();
+    }
 }
 
 void GraphViewer::mouseWheel()
@@ -245,4 +292,13 @@ void GraphViewer::axisDoubleClicked(QCPAxis * axis)
 {
     axis->rescale();
     _pPlot->replot();
+}
+
+void GraphViewer::beforeReplot()
+{
+    // this is to prevent the legend from stretching if the plot is stretched.
+    // Since we've set the inset placement to be ipFree, the width/height of the legend
+    // is also defined in axisRect coordinates (0..1) and thus would stretch.
+    // This is due to change in a future release (probably QCP 2.0) since it's basically a design mistake.
+    _pPlot->legend->setMaximumSize(_pPlot->legend->minimumSizeHint());
 }
