@@ -103,14 +103,12 @@ void GraphViewer::setupGraph(QList<QList<double> > * pDataLists, QStringList * p
 
    _pPlot->legend->setVisible(true);
    _pPlot->rescaleAxes();
-   // replot, so the legend gets a size
-   _pPlot->replot();
 
    // Top left corner is (0, 0), top right corner is (1, 0)
-   // get the size of the legend item
-   QRect size = _pPlot->legend->outerRect();
+   // get the size of the legend item, it uses the minimumSize
+   QSize size = _pPlot->legend->minimumSizeHint();
    // recalculate the new position, we must normalize it, so devide it by the width of the x-axis
-   QRectF pos(0.98 - ((double)size.width()) / _pPlot->axisRect()->width(), 0.02, org.width(), org.height());
+   QRectF pos(0.98 - ((double)size.width()) / _pPlot->axisRect()->width(), 0.02, ((double)size.width()) / _pPlot->axisRect()->width(), ((double)size.height())/_pPlot->axisRect()->height());
    // now we can set the new rect
    _pPlot->axisRect()->insetLayout()->setInsetRect(0, pos);
    // it isn't 100% accurate (instead of position 0.98 it is 0.97), maybe we should find out why? (maybe we must use another value to normalize it?)
@@ -253,6 +251,7 @@ void GraphViewer::mousePress(QMouseEvent *event)
     }
 
     qDebug() << "x: " << (double)((event->pos().x() - _pPlot->axisRect()->left()) / (double)_pPlot->axisRect()->width()) << "\ty: " << (double)((event->pos().y() - _pPlot->axisRect()->top()) / (double)_pPlot->axisRect()->height());
+    qDebug() << _pPlot->axisRect()->insetLayout()->insetRect(0);
 }
 
 void GraphViewer::mouseRelease(QMouseEvent *event)
