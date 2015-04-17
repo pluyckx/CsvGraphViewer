@@ -8,7 +8,7 @@
 #include "ui_mainwindow.h"
 
 const QString MainWindow::_cWindowTitle = QString("GraphViewer");
-const int MainWindow::cDynamicMaxUpdateInterval = 1000;
+const int MainWindow::cDynamicMaxUpdateInterval = 100;
 
 MainWindow::MainWindow(QStringList cmdArguments, QWidget *parent) :
     QMainWindow(parent),
